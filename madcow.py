@@ -924,7 +924,7 @@ def main():
         logfile = config.main.logfile
         if logfile is not None and len(logfile):
             handler = log.FileHandler(filename=logfile)
-            handler.setLevel(opts.loglevel)
+            handler.setLevel(loglevel)
             formatter = log.Formatter(_logformat)
             handler.setFormatter(formatter)
             log.getLogger('').addHandler(handler)

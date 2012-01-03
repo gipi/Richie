@@ -2,6 +2,8 @@ import textwrap
 from include import irclib
 import re
 import sys
+import os
+import struct
 from madcow import Madcow, Request
 from include.colorlib import ColorLib
 import random
@@ -11,7 +13,17 @@ from time import sleep, time as unix_time
 class IRCProtocol(Madcow):
     """Implements IRC protocol for madcow"""
 
-    events = ['welcome', 'disconnect', 'kick', 'privmsg', 'pubmsg', 'namreply']
+    events = [
+            'welcome',
+            'disconnect',
+            'kick',
+            'privmsg',
+            'pubmsg',
+            'namreply',
+            'ctcp',
+            'dccmsg',
+            'dcc_disconnect',
+    ]
 
     def __init__(self, config=None, dir=None):
         Madcow.__init__(self, config=config, dir=dir)
@@ -36,6 +48,7 @@ class IRCProtocol(Madcow):
             self.channels = []
         self.names = {}
         self.last_names_update = unix_time()
+        self.received_bytes = 0
 
     def connect(self):
         log.info('[IRC] * Connecting to %s:%s' % (
@@ -195,6 +208,39 @@ class IRCProtocol(Madcow):
         self.names[channel] = nicks
         self.last_names_update = unix_time()
 
+    def on_ctcp(self, connection, event):
+        """
+        The original handshake consisted of the sender sending the following CTCP to the receiver:
+                DCC SEND <filename> <ip> <port>
+        """
+        args = event.arguments()[1].split()
+        if args[0] != "SEND":
+            return
+        self.filename = os.path.basename(args[1])
+        if os.path.exists(self.filename):
+            print "A file named", self.filename,
+            print "already exists. Refusing to save it."
+
+        self.dcc = self.irc.dcc("raw")
+        self.file = open(self.filename, "w")
+        peeraddress = irclib.ip_numstr_to_quad(args[2])
+        peerport = int(args[3])
+        self.dcc.connect(peeraddress, peerport)
+
+    def on_dccmsg(self, connection, event):
+        """
+        This is called when the raw data from the DCC arrives.
+        """
+        data = event.arguments()[0]
+        self.file.write(data)
+        self.received_bytes = self.received_bytes + len(data)
+        self.dcc.privmsg(struct.pack("!I", self.received_bytes))
+
+    def on_dcc_disconnect(self, connection, event):
+        self.file.close()
+        print "Received file %s (%d bytes)." % (self.filename,
+                                                self.received_bytes)
+        self.received_bytes = 0
 
 class ProtocolHandler(IRCProtocol):
     pass

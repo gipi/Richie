@@ -11,7 +11,10 @@ import logging as log
 from time import sleep, time as unix_time
 
 class IRCProtocol(Madcow):
-    """Implements IRC protocol for madcow"""
+    """
+    Implements IRC protocol for madcow wrapping in self.irc the IRC() instance
+    and using the variable server to contain the server.
+    """
 
     events = [
             'welcome',
@@ -212,6 +215,8 @@ class IRCProtocol(Madcow):
         """
         The original handshake consisted of the sender sending the following CTCP to the receiver:
                 DCC SEND <filename> <ip> <port>
+
+        FIXME: more then one file exchange is not reliable.
         """
         args = event.arguments()[1].split()
         if args[0] != "SEND":

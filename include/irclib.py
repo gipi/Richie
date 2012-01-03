@@ -379,7 +379,7 @@ class ServerConnection(Connection):
         self.socket = None
         self.ssl = None
 
-    def connect(self, server, port, nickname, password=None, username=None,
+    def connect(self, server, port, nickname, password="password", username=None,
                 ircname=None, localaddress="", localport=0, ssl=False, ipv6=False):
         """Connect/reconnect to a server.
 
